@@ -1,16 +1,19 @@
 # Waymark
 
-A self-hosted bookmark manager built for cheap shared hosting (specifically
-Heart Internet's shared hosting, which runs its own **eXtend control
-panel** - not cPanel). It's inspired by Linkwarden but is a from-scratch
-rewrite: Linkwarden's stack (Next.js, Postgres, Redis, headless-browser
-archiving) simply cannot run on that kind of account, so Waymark is built
-entirely on plain PHP and MySQL/MariaDB instead.
+A self-hosted bookmark manager built for cheap shared hosting - the kind of
+account that gives you a MySQL database, file upload, and cron, but no
+root, no Docker, and no persistent background processes. It's inspired by
+Linkwarden but is a from-scratch rewrite: Linkwarden's stack (Next.js,
+Postgres, Redis, headless-browser archiving) simply cannot run on that
+kind of account, so Waymark is built entirely on plain PHP and
+MySQL/MariaDB instead.
 
-Nothing in the application code is cPanel- or eXtend-specific - it's plain
-PHP/PDO/MySQL and would deploy the same way on any shared host that gives
-you a MySQL database, file upload, and cron. Only the deployment steps
-below are written specifically for eXtend's screens.
+Nothing in the application code is tied to any particular hosting
+provider or control panel - it's plain PHP/PDO/MySQL and deploys the same
+way on any shared host that gives you those three things. The deployment
+steps below are written in generic, cPanel-style terms (MySQL Databases,
+phpMyAdmin, File Manager, Cron Jobs); the exact screen names and layout
+will vary a bit by host, but the underlying steps are the same everywhere.
 
 ## Architecture
 
@@ -39,34 +42,32 @@ below are written specifically for eXtend's screens.
 - Config lives in `config.php` (gitignored). Copy `config.sample.php` to
   `config.php` and fill in your real values.
 
-## Deploying to Heart Internet (eXtend Control Panel)
+## Deploying to shared hosting
 
-eXtend groups the tools you need under **Web Tools** on the account
-dashboard. Screens and exact wording can shift between Heart Internet
-plans/updates - if something below doesn't match what you see, the
-"Assumptions to verify" section at the end lists what to double-check.
+Most budget shared-hosting control panels (cPanel and its many lookalikes)
+group these tools under similar names - **MySQL Databases**, **File
+Manager**, **Cron Jobs**. Exact wording and screen layout varies by host;
+if something below doesn't quite match what you see, the "Assumptions to
+verify" section at the end lists what to double-check with your host's own
+docs or support.
 
 ### 1. Create the database
 
-1. Log into your **eXtend Control Panel** and scroll to **Web Tools**.
-2. Click **MySQL Databases**.
-3. Enter a username for the database (6-9 characters, and it can't contain
-   "test", "root", "mysql", or "alive"). Click **Generate Password** (or set
-   your own), then click **Create**.
-
-Unlike cPanel, eXtend creates the database and its user together as a
-single step - **the database is given the same name as the username you
-just entered**. There's no separate "create database" / "create user" /
-"add user to database" sequence.
-
-4. On the MySQL Databases page, note the exact **hostname** shown for your
-   new database - Heart Internet does not always use `localhost` for this;
-   use whatever the panel actually shows you.
+1. Log into your hosting control panel and find **MySQL Databases** (it
+   may be under a "Databases" section).
+2. Create a new database, then create a database user with a strong
+   password, then add that user to the database with all privileges.
+   Some panels combine these into one step and automatically give the
+   database the same name as the username you entered - if so, just
+   follow the single form it gives you.
+3. Note the exact **hostname** shown for your new database - it isn't
+   always `localhost`; use whatever the panel actually shows you.
 
 ### 2. Upload the files
 
-Upload the contents of this repo to your hosting account via eXtend's
-**File Manager** or FTP. Where exactly depends on how you want it exposed:
+Upload the contents of this repo to your hosting account via your host's
+**File Manager** or FTP/SFTP. Where exactly depends on how you want it
+exposed:
 
 - To serve it at your domain root, upload everything into `public_html/`.
 - To serve it at a subpath (e.g. `example.com/waymark/`), upload
@@ -105,8 +106,8 @@ a live site is still a bad idea - it's the single biggest thing to remember
 from this whole guide.
 
 **If you'd rather do it by hand** (or the wizard can't write `config.php`
-and you don't want to paste it in): open **phpMyAdmin** via
-`MySQL Databases > Manage` in eXtend, import `schema.sql` yourself under
+and you don't want to paste it in): open **phpMyAdmin** from your
+control panel's database tools, import `schema.sql` yourself under
 the **Import** tab, then copy `config.sample.php` to `config.php` and fill
 in `db.host`/`db.name`/`db.user`/`db.pass` (from step 1), a `session_secret`
 and `cron_secret` (32+ random bytes as hex each - `php -r "echo bin2hex(random_bytes(32));"`
@@ -124,28 +125,30 @@ create your account.
 - Export your links (`export.php`) and re-import the file (`import.php`) to
   confirm the round-trip works.
 
-### 5. Set up the dead-link checker as a scheduled task
+### 5. Set up the dead-link checker as a cron job
 
 The dead-link checker can't run as a background process (shared hosting
 doesn't allow that), so it runs in small batches on a schedule instead.
 
-1. In eXtend, go to **Web Tools > Scheduled Tasks**.
-2. Before filling this in, open **Website Help & Diagnostics > Paths and
-   Versions** in a separate tab and note the exact PHP CLI interpreter path
-   for your account - don't guess it, it varies by PHP version.
-3. Back on Scheduled Tasks, enter the command in the
-   `/[INTERPRETER] /[FILE] [ARGUMENT]` form eXtend expects, e.g.:
+1. In your control panel, find **Cron Jobs** (sometimes called "Scheduled
+   Tasks").
+2. Before filling this in, find your account's exact PHP CLI interpreter
+   path - most panels show this under something like "Select PHP
+   Version" or a "Paths" page; don't guess it, it varies by PHP version
+   and by host.
+3. Enter the command in whatever form your panel expects, e.g.:
 
    ```
-   /usr/bin/php /home/sites/example.com/public_html/waymark/cron/check_links.php
+   /usr/bin/php /home/yourusername/public_html/waymark/cron/check_links.php
    ```
 
-   (adjust both paths to match what "Paths and Versions" and your upload
-   location actually show).
-4. Click **Test Command** to confirm it runs cleanly before saving.
-5. Set the schedule to run every 5-15 minutes and click **Update**. eXtend
-   only allows **up to three scheduled tasks per account**, so this uses one
-   of them.
+   (adjust both paths to match your account's real interpreter path and
+   upload location).
+4. If your panel offers a "test command" option, use it to confirm the
+   command runs cleanly before saving.
+5. Set the schedule to run every 5-15 minutes and save. Some budget hosts
+   cap how many cron jobs an account can have (three is a common limit) -
+   this app only needs the one.
 
 This is resumable and safe to run as often as every 5 minutes: each run
 checks up to 50 links (oldest-checked first) and stops early if it's
@@ -155,8 +158,8 @@ and never re-checks the same links before working through the backlog.
 **If your plan doesn't support running a PHP file directly this way**,
 `cron/check_links.php` also accepts being triggered over HTTP instead, once
 `cron_secret` is set in `config.php`. Enter this as the command on the same
-Scheduled Tasks screen, using `curl`'s path (from "Paths and Versions") as
-the interpreter and the URL as the argument:
+cron screen, using `curl`'s path as the interpreter and the URL as the
+argument:
 
 ```
 /usr/bin/curl -s "https://example.com/waymark/cron/check_links.php?token=YOUR_CRON_SECRET"
@@ -201,45 +204,45 @@ These were assumed about the target hosting account. Confirm them (or
 adjust the code) before relying on this in production:
 
 - **PHP 8.1 or 8.2** with the `pdo_mysql`, `curl`, `dom`/`libxml`, and
-  `mbstring` extensions enabled. eXtend lets you pick a PHP version under
-  **Web Tools > Switch PHP Version**; these extensions should be enabled by
-  default on any version you pick, but it's worth a quick check. If
-  switching there doesn't seem to take effect, Heart Internet's own
-  documentation says to add a line like `AddHandler application/x-httpd-php82 .php`
-  (adjust the version number) to `.htaccess` as a fallback - this repo's
+  `mbstring` extensions enabled. Most control panels let you pick a PHP
+  version under something like "Select PHP Version"; these extensions
+  should be enabled by default on any version you pick, but it's worth a
+  quick check. If switching there doesn't seem to take effect, some hosts
+  need a line like `AddHandler application/x-httpd-php82 .php` (adjust
+  the version number) added to `.htaccess` as a fallback - this repo's
   `.htaccess` doesn't include that line since the exact version number is
-  account-specific, so add it yourself if needed.
+  account-specific, so add it yourself if your host needs it.
 - **No Composer.** The app has zero third-party dependencies, so this
   shouldn't matter, but if you do confirm Composer is available on your
   account, that's worth knowing for future work.
 - **MariaDB 10.0.5+ / MySQL 5.6+** using the InnoDB storage engine, which is
   required for `FULLTEXT` indexes on InnoDB tables (`schema.sql` creates
-  everything as InnoDB). Any current Heart Internet MySQL version should be
-  new enough, but it's worth confirming if you're on an older or legacy
-  plan.
-- **Apache with `.htaccess` support (`AllowOverride`)**, which is what
-  Heart Internet's shared platform runs on. If your `.htaccess` files
-  appear to be ignored, the `Require all denied` rules protecting
-  `config.php` and `includes/` won't take effect - check with support if
-  in doubt.
+  everything as InnoDB). Any current shared-hosting MySQL/MariaDB version
+  should be new enough, but it's worth confirming if you're on an older or
+  legacy plan.
+- **Apache with `.htaccess` support (`AllowOverride`)**, which is standard
+  on most shared-hosting platforms. If your `.htaccess` files appear to be
+  ignored, the `Require all denied` rules protecting `config.php` and
+  `includes/` won't take effect - check with your host's support if in
+  doubt.
 - **PHP sessions can write to their default save path.** The app uses
   native PHP sessions with default settings; if your account restricts
   `session.save_path`, you may need to set one explicitly in `config.php`'s
   bootstrap or via a custom `php.ini`.
-- **Running a PHP file directly from Scheduled Tasks is supported** on
-  eXtend (confirmed in Heart Internet's own documentation, which gives the
-  exact `/[INTERPRETER] /[FILE] [ARGUMENT]` form used in step 5 above), so
-  the PHP CLI path should work rather than needing the HTTP/curl fallback -
-  but confirm the exact interpreter path via "Paths and Versions" rather
-  than assuming `/usr/bin/php` is correct for your account.
-- **eXtend allows up to three scheduled tasks per account.** Not a problem
-  for this app (it only needs one), but worth knowing if you plan to add
-  more automation later.
-- **SSH access is a separate, formal request** on Heart Internet shared
-  hosting (an application form with ID verification), not enabled by
-  default - and this app doesn't need it anywhere in this workflow.
-  Everything above is driven through eXtend's web UI (phpMyAdmin via MySQL
-  Databases > Manage, File Manager, Scheduled Tasks).
+- **That running a PHP file directly from a cron job is supported on your
+  host.** Most shared-hosting panels support this, but the exact command
+  syntax varies - check your host's own documentation if the form shown
+  in step 5 above doesn't match what your panel expects, and confirm the
+  real interpreter path rather than assuming `/usr/bin/php` is correct for
+  your account.
+- **Some hosts cap the number of cron jobs per account** (three is a
+  common limit on budget plans). Not a problem for this app (it only
+  needs one), but worth knowing if you plan to add more automation later.
+- **SSH access isn't guaranteed on budget shared hosting** - some hosts
+  don't offer it at all, others require a separate request or a plan
+  upgrade. This app doesn't need it anywhere in this workflow; everything
+  above is driven through your host's web-based control panel (phpMyAdmin,
+  File Manager, Cron Jobs).
 
 ## Feature scope
 

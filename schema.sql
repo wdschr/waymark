@@ -1,5 +1,6 @@
 -- Waymark schema
--- Import this once via phpMyAdmin after creating your database in cPanel.
+-- Import this once via phpMyAdmin (or your host's SQL import tool) after
+-- creating your database.
 -- Requires MySQL 5.6+ / MariaDB 10.0.5+ (InnoDB FULLTEXT support).
 
 SET NAMES utf8mb4;

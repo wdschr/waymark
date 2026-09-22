@@ -5,8 +5,8 @@ declare(strict_types=1);
  * Web-based setup wizard, in the same spirit as Roundcube's installer/:
  * check requirements, collect and test DB credentials, import the schema,
  * write config.php, and create the first account - all through the
- * browser, since Heart Internet's eXtend accounts don't reliably give you
- * SSH or Composer to do this from a terminal.
+ * browser, since many budget shared-hosting accounts don't reliably give
+ * you SSH or Composer to do this from a terminal.
  *
  * DELETE THIS DIRECTORY (or at least install/index.php) once setup is
  * done. Left in place, it lets anyone who finds it reconfigure your
@@ -224,10 +224,10 @@ switch ($step) {
         echo install_step_indicator($steps, 'database');
         ?>
         <h1>Database connection</h1>
-        <p>Enter the database eXtend (or your control panel) created for
-           you. On Heart Internet, the database name and username are
-           usually the same value, and the exact host is shown on the
-           MySQL Databases page - it isn't always <code>localhost</code>.</p>
+        <p>Enter the database your hosting control panel created for
+           you. On many shared hosts the database name and username are
+           the same value, and the exact host is shown wherever your
+           panel lists your databases - it isn't always <code>localhost</code>.</p>
         <?php if ($error): ?><div class="flash flash-error"><?= h($error) ?></div><?php endif; ?>
         <form method="post" action="?step=database">
             <?= wf_csrf_field() ?>

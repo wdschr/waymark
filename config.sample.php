@@ -4,11 +4,11 @@
 
 return [
     'db' => [
-        // On Heart Internet's eXtend control panel, the database and its
-        // user are created together as one username (Web Tools > MySQL
-        // Databases) - the database gets the same name as that username.
-        // The exact host to use is shown on that same page after creation;
-        // it is not always "localhost".
+        // On many shared-hosting control panels, the database and its
+        // user are created together as one username - the database
+        // gets the same name as that username. The exact host to use is
+        // shown wherever your panel lists the new database; it is not
+        // always "localhost".
         'host'    => 'localhost',
         // 'port' => 3306,          // uncomment if your host uses a non-default port
         // 'unix_socket' => '/path/to/mysql.sock', // uncomment to connect via socket instead of host/port
